@@ -15,7 +15,7 @@ on:
       - '.github/workflows/build-and-push.yml'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -36,19 +36,30 @@ jobs:
         with:
           registry: ghcr.io
           username: Amsatnaf
-          # AQUI ESTAVA O ERRO (falta de chaves duplas)
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          # ADICIONE ESTA LINHA ABAIXO:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
           tags: |
             ghcr.io/amsatnaf/flask-ola-mundo:latest
-          labels: |
-            org.opencontainers.image.source=${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.run_id }}
+            ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
+
+      - name: Update Kubernetes Manifest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Ajuste o caminho do arquivo abaixo se necessário
+          FILE_PATH="prod/deployment.yaml"
+          
+          sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
+          
+          git add $FILE_PATH
+          git commit -m "chore(ci): update image tag to ${{ github.sha }}"
+          git push
