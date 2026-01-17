@@ -1,0 +1,52 @@
+name: CI - Build & Push image (GHCR)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - '.github/workflows/build-and-push.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - '.github/workflows/build-and-push.yml'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: Amsatnaf
+          password: ${ secrets.GITHUB_TOKEN }
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${ github.event_name == 'push' && github.ref == 'refs/heads/main' }
+          tags: |
+            ghcr.io/Amsatnaf/flask-ola-mundo:latest
+          labels: |
+            org.opencontainers.image.source=${ github.repository }
+            org.opencontainers.image.revision=${ github.sha }
+            org.opencontainers.image.created=${ github.run_id }
