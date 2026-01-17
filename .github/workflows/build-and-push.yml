@@ -1,17 +1,12 @@
-# Nome do Workflow que aparecerá na aba "Actions" do GitHub
 name: CI - Build & Push image (GHCR)
 
-# "on": Define QUANDO esse robô vai acordar para trabalhar
 on:
-  # Acorda quando houver um "git push"...
   push:
-    branches: [ main ] # ...mas APENAS se o push for na branch "main"
-    paths:             # ...e APENAS se houver mudanças nestes arquivos:
-      - 'app/**'       # (Qualquer coisa na pasta do código)
-      - 'Dockerfile'   # (O arquivo da imagem)
-      - '.github/workflows/build-and-push.yml' # (Ou se você mexer neste próprio arquivo)
-  
-  # Acorda também quando alguém abrir um Pull Request para a main
+    branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - '.github/workflows/build-and-push.yml'
   pull_request:
     branches: [ main ]
     paths:
@@ -19,70 +14,51 @@ on:
       - 'Dockerfile'
       - '.github/workflows/build-and-push.yml'
 
-# Permissões de segurança para o robô do GitHub (GITHUB_TOKEN)
 permissions:
-  contents: write # CRUCIAL: Permite que o robô faça COMMIT no seu repo (alterar o YAML)
-  packages: write # Permite que o robô suba imagens no GitHub Container Registry
+  contents: write
+  packages: write
 
-# Lista de tarefas a serem executadas
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest # O computador virtual que o GitHub empresta é um Linux Ubuntu
-    
-    # Passo a passo da tarefa
+    runs-on: ubuntu-latest
     steps:
-      # 1. Baixa o seu código do repositório para o computador virtual
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Instala o QEMU (Emulador) para conseguir criar imagens para ARM (Oracle Cloud)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      # 3. Instala o Docker Buildx (Versão turbinada do Docker para multi-arquitetura)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4. Faz login no registro de imagens do GitHub (GHCR)
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: Amsatnaf
-          password: ${{ secrets.GITHUB_TOKEN }} # Senha automática gerada pelo GitHub
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 5. O Grande Momento: Constrói a imagem e manda para a nuvem
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: .         # Usa a pasta atual como raiz
-          file: ./Dockerfile # Onde está o arquivo de receita da imagem
-          # Cria imagem tanto para PC normal (amd64) quanto para Oracle/Mac (arm64)
+          context: .
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          # Só faz o upload (push) se for um evento de "push" na branch "main"
           push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          # Cria duas etiquetas (tags) para a mesma imagem:
           tags: |
-            ghcr.io/amsatnaf/flask-ola-mundo:latest         # Tag genérica "mais atual"
-            ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }} # Tag ÚNICA com o ID do commit
+            ghcr.io/amsatnaf/flask-ola-mundo:latest
+            ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
 
-      # 6. O Pulo do Gato (GitOps): Atualiza o manifesto do Kubernetes
       - name: Update Kubernetes Manifest
-        # Só roda se for push na main (não roda em Pull Request)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          # Configura o "usuário fantasma" do git para fazer o commit
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-
-          # Define qual arquivo vamos editar (Onde está seu Deployment do K8s)
+          
           FILE_PATH="prod/deployment.yaml"
-
-          # Comando SED (Stream Editor): Procura e Substitui texto
-          # Tradução: "Procure a linha que tem 'image: ...' e troque pelo SHA novo"
+          
           sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
-
-          # Comita a mudança de volta no repositório
+          
           git add $FILE_PATH
           git commit -m "chore(ci): update image tag to ${{ github.sha }}"
           git push
