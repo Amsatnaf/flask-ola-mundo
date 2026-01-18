@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: flask-email-config
+  labels:
+    app: flask-web
+spec:
+  route:
+    receiver: 'email-me'
+    groupBy: ['alertname']
+    # Se quiser testar rápido, diminua esses tempos (mas cuidado com spam)
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 12h
+    matchers:
+      - name: severity
+        value: critical # Só manda e-mail se for grave!
+
+  receivers:
+  - name: 'email-me'
+    emailConfigs:
+    - to: 'diego.amsatnaf@gmail.com'
+      from: 'diego.alme@hotmail.com'
+      smarthost: 'smtp.gmail.com:587' # Exemplo do Gmail
+      authUsername: 'diego.amsatnaf@gmail.com'
+      authIdentity: 'diego.amsatnaf@gmail.com'
+      authPassword:
+        name: email-auth # <--- Nome do Secret que criamos no Passo 1
+        key: password
+      requireTLS: true
