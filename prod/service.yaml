@@ -9,6 +9,7 @@ spec:
   selector:
     app: flask-web
   ports:
-    - name: http
+    - name: web       # <--- MUDAMOS DE 'http' PARA 'web'
       port: 80
       targetPort: 8080
+      protocol: TCP

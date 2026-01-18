@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: flask-monitor
+  # IMPORTANTE: O Rancher às vezes exige que o ServiceMonitor tenha labels específicas
+  # para que o Prometheus dele identifique. Geralmente não precisa, mas se não aparecer,
+  # é aqui que investigamos.
+  labels:
+    app: flask-web
+spec:
+  selector:
+    matchLabels:
+      app: flask-web # <--- Isso TEM que bater com a label do seu Service.yaml
+  endpoints:
+  - port: web        # <--- Isso TEM que bater com o 'name' da porta no Service.yaml
+    path: /metrics   # O caminho padrão que a biblioteca Python cria
+    interval: 15s    # Raspar a cada 15 segundos
