@@ -1,1 +1,4 @@
-flask==3.0.2
+flask
+prometheus-flask-exporter
+flake8
+pytest

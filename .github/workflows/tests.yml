@@ -19,7 +19,8 @@ jobs:
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
-          pip install flask pytest flake8
+          #pip install flask pytest flake8 prometheus-flask-exporter
+          pip install -r app/requirements.txt
 
       # Verifica se tem erro de sintaxe (como aquele "200 - texto" que tivemos)
       - name: Verificar Sintaxe (Linting)
