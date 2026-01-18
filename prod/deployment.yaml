@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: flask-web
-          image: ghcr.io/amsatnaf/flask-ola-mundo:latest
+          image: ghcr.io/amsatnaf/flask-ola-mundo:d04b71be3f066b96f95c4ba93953e924fa12f48e
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
