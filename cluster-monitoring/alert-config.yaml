@@ -12,9 +12,9 @@ spec:
     groupWait: 30s
     groupInterval: 5m
     repeatInterval: 12h
-    matchers:
-      - name: severity
-        value: critical
+      #matchers:
+      #- name: severity
+      # value: critical
 
   receivers:
   - name: 'email-me'
