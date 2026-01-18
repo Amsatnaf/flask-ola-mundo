@@ -2,29 +2,30 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
   name: flask-email-config
+  # MUDANÇA IMPORTANTE: Vamos jogar direto no sistema
+  namespace: cattle-monitoring-system
   labels:
-    app: flask-web
+    release: rancher-monitoring
 spec:
   route:
     receiver: 'email-me'
     groupBy: ['alertname']
-    # Se quiser testar rápido, diminua esses tempos (mas cuidado com spam)
     groupWait: 30s
     groupInterval: 5m
     repeatInterval: 12h
     matchers:
       - name: severity
-        value: critical # Só manda e-mail se for grave!
+        value: critical
 
   receivers:
   - name: 'email-me'
     emailConfigs:
-    - to: 'diego.amsatnaf@gmail.com'
+    - to: 'diego.amsatnaf@l@gmail.com'
       from: 'diego.alme@hotmail.com'
-      smarthost: 'smtp.gmail.com:587' # Exemplo do Gmail
-      authUsername: 'diego.amsatnaf@gmail.com'
-      authIdentity: 'diego.amsatnaf@gmail.com'
+      smarthost: 'smtp.gmail.com:587'
+      authUsername: 'diego.amsatnaf@l@gmail.com'
+      authIdentity: 'sdiego.amsatnaf@l@gmail.com'
       authPassword:
-        name: email-auth # <--- Nome do Secret que criamos no Passo 1
+        name: email-auth # Agora ele vai achar, pois ambos estão no cattle-monitoring-system
         key: password
       requireTLS: true

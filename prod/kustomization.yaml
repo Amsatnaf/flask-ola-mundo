@@ -9,5 +9,4 @@ resources:
   - ingress.yaml
   - servicemonitor.yaml
   - hpa.yaml
-  - alert-config.yaml
   - alert-rules.yaml

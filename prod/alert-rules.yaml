@@ -4,8 +4,9 @@ metadata:
   name: flask-rules
   labels:
     app: flask-web
+    release: rancher-monitoring
+    app.kubernetes.io/part-of: rancher-monitoring
     # O Rancher precisa dessa label para pegar a regra automaticamente
-    release: rancher-monitoring 
 spec:
   groups:
   - name: flask-alerts
