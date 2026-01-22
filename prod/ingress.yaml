@@ -1,13 +1,15 @@
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: flask-web
+  namespace: flask-prod
   annotations:
-    # cert-manager.io/cluster-issuer: "letsencrypt-prod"  # opcional para TLS
+    kubernetes.io/ingress.class: "gce"
 spec:
-  ingressClassName: traefik
+  ingressClassName: gce
   rules:
-    - host: flask.prod.129.213.28.76.sslip.io
+    - host: flask.prod.REPLACE_WITH_LB_IP.sslip.io
       http:
         paths:
           - path: /
@@ -17,7 +19,4 @@ spec:
                 name: flask-web
                 port:
                   number: 80
-# tls:
-#   - hosts:
-#       - flask.prod.129.213.28.76.sslip.io
-#     secretName: flask-prod-tls
+
