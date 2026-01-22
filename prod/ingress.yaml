@@ -9,7 +9,7 @@ metadata:
 spec:
   ingressClassName: gce
   rules:
-    - host: flask.prod.iptesteaqui.sslip.io
+    - host: flask.prod.34-96-126-85.sslip.io
       http:
         paths:
           - path: /
