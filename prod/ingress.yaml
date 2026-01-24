@@ -4,14 +4,12 @@ metadata:
   name: flask-web
   namespace: flask-prod
   annotations:
-    # Cria o LB público na AWS
     alb.ingress.kubernetes.io/scheme: internet-facing
-    # Roteamento direto para o Pod (mais rápido)
     alb.ingress.kubernetes.io/target-type: ip
 spec:
   ingressClassName: alb
   rules:
-    - http:  # <--- Note que removemos a linha "- host: ..."
+    - http:
         paths:
           - path: /
             pathType: Prefix
