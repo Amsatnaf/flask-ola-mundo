@@ -45,13 +45,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           # MUDANÇA 1: Push se for main OU rolling
           push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling') }}
-<<<<<<< HEAD
           # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)  
           tags: |
-=======
           tags: |
             # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)
->>>>>>> e99c514 (Alterei o build and push para fazer testes com branch)
             ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-ola-mundo:latest' || '' }}
             ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
 
