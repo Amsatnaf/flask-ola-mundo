@@ -3,12 +3,12 @@ kind: Service
 metadata:
   name: flask-web
   namespace: flask-prod
-  # Removemos annotations do Google Cloud aqui
 spec:
-  type: ClusterIP
+  type: NodePort  # <--- Mudamos de ClusterIP para NodePort
   selector:
     app: flask-web
   ports:
     - name: http
       port: 80
       targetPort: 8080
+      nodePort: 30080  # <--- Fixamos a porta externa (deve ser entre 30000-32767)
