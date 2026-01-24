@@ -47,7 +47,6 @@ jobs:
           push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling') }}
           # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)  
           tags: |
-          tags: |
             # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)
             ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-ola-mundo:latest' || '' }}
             ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
