@@ -18,11 +18,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: meu-app-svc # Nome interno
+  name: flask-web #Nome interno
+  namespace: flask-prod
 spec:
   type: ClusterIP   # IMPORTANTE: Na OKE com Ingress, use ClusterIP, não LoadBalancer
   selector:
-    app: meu-app    # Tem que bater com o label do seu Pod/Deployment
+    app: flask-web    # Tem que bater com o label do seu Pod/Deployment
   ports:
     - port: 80      # Porta que o Ingress vai chamar
       targetPort: 80 # Porta que seu container escuta
