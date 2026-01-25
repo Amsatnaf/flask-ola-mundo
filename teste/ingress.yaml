@@ -1,1 +1,17 @@
-
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flask-web
+spec:
+  ingressClassName: nginx # IMPORTANTE: Define que quem manda aqui é o Nginx
+  rules:
+  - host: flask-web.143.47.111.15.sslip.io # Troque pelo seu IP Público
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: meu-app-svc # Tem que ser igual ao nome do Service acima
+            port:
+              number: 80
