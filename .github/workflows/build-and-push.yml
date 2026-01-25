@@ -44,35 +44,39 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
+          # Regra: Faz push se for main, rolling OU teste
           push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling' || github.ref == 'refs/heads/teste') }}
           tags: |
             ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-ola-mundo:latest' || '' }}
             ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
 
       - name: Update Kubernetes Manifest
-        # Executa na main (prod) ou teste (dev)
+        # Executa atualização de manifesto se for main ou teste
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/teste')
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-          # Lógica de seleção de pastas
+          # LÓGICA DE PASTAS SEPARADAS
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "Branch Main detectada: Atualizando PROD"
-            FILE_PATH="k8s/prod/deployment.yaml"
+            echo "Branch Main detectada: Atualizando pasta PROD"
+            FILE_PATH="prod/deployment.yaml"
           elif [[ "${{ github.ref }}" == "refs/heads/teste" ]]; then
-            echo "Branch Teste detectada: Atualizando DEV"
-            FILE_PATH="k8s/dev/deployment.yaml"
+            echo "Branch Teste detectada: Atualizando pasta TESTE"
+            FILE_PATH="teste/deployment.yaml"
           fi
 
-          # Verifica se o arquivo existe antes de tentar editar (segurança)
+          echo "Alvo: $FILE_PATH"
+
+          # Verifica se o arquivo existe para evitar erro
           if [ -f "$FILE_PATH" ]; then
+             # Atualiza a tag da imagem com o SHA do commit
              sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
              
              git add $FILE_PATH
              git commit -m "chore(ci): update image tag to ${{ github.sha }} [skip ci]"
              git push
           else
-             echo "Erro: Arquivo $FILE_PATH não encontrado."
+             echo "ERRO: O arquivo $FILE_PATH não existe nesta branch. Verifique a estrutura de pastas."
              exit 1
           fi
