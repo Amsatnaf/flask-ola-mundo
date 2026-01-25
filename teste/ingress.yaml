@@ -12,6 +12,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: meu-app-svc # Tem que ser igual ao nome do Service acima
+            name: flask-web # Tem que ser igual ao nome do Service acima
             port:
               number: 80

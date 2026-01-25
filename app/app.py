@@ -10,7 +10,7 @@ metrics.info('app_info', 'Application info', version='1.0.3')
 @app.route('/')
 def hello():
   ##return 'Olá, mundo! 👋', 200
-    return 'CI - CD com Rancher Fleet e GitHub... 🚀 OKE....', 200
+    return 'CI - CD com Rancher Fleet e GitHub... 🚀 OKE no Ar', 200
 
 if __name__ == '__main__':
     # Importante: host 0.0.0.0 para funcionar no Docker
