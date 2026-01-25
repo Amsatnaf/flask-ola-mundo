@@ -26,4 +26,4 @@ spec:
     app: flask-web    # Tem que bater com o label do seu Pod/Deployment
   ports:
     - port: 80      # Porta que o Ingress vai chamar
-      targetPort: 80 # Porta que seu container escuta
+      targetPort: 8080 # Porta que seu container escuta
