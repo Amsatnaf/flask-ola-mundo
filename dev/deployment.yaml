@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-web
+  namespace: flask-prod
+  labels:
+    app: flask-web
+spec:
+  replicas: 1
+  strategy:            # ← strategy vai AQUI, dentro de deployment.spec
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: flask-web
+  template:
+    metadata:
+      labels:
+        app: flask-web
+    spec:
+      containers:
+        - name: flask-web
+          image: ghcr.io/amsatnaf/flask-ola-mundo:866ba3aa9a12fe70681697a67632453008f2216a
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "64Mi"  # Mínimo garantido pra subir
+              cpu: "100m"     # 10% de um núcleo (mili-cores)
+            limits:
+              memory: "256Mi" # Se passar disso, mata o pod (OOMKill)
+              cpu: "500m"     # Máximo que pode usar (50% de um núcleo)
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10

@@ -37,42 +37,29 @@ jobs:
           registry: ghcr.io
           username: Amsatnaf
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling' || github.ref == 'refs/heads/teste') }}
+          # MUDANÇA 1: Push se for main OU rolling
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling') }}
+          # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)  
           tags: |
             ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-ola-mundo:latest' || '' }}
             ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
 
       - name: Update Kubernetes Manifest
-        # Executa na main (prod) ou teste (dev)
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/teste')
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-
-          # Lógica de seleção de pastas
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "Branch Main detectada: Atualizando PROD"
-            FILE_PATH="k8s/prod/deployment.yaml"
-          elif [[ "${{ github.ref }}" == "refs/heads/teste" ]]; then
-            echo "Branch Teste detectada: Atualizando DEV"
-            FILE_PATH="k8s/dev/deployment.yaml"
-          fi
-
-          # Verifica se o arquivo existe antes de tentar editar (segurança)
-          if [ -f "$FILE_PATH" ]; then
-             sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
-             
-             git add $FILE_PATH
-             git commit -m "chore(ci): update image tag to ${{ github.sha }} [skip ci]"
-             git push
-          else
-             echo "Erro: Arquivo $FILE_PATH não encontrado."
-             exit 1
-          fi
+          
+          FILE_PATH="prod/deployment.yaml"
+          
+          sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
+          
+          git add $FILE_PATH
+          git commit -m "chore(ci): update image tag to ${{ github.sha }}"
+          git push

@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flask-rules
+  namespace: flask-prod
+  labels:
+    app: flask-web
+    release: rancher-monitoring
+    app.kubernetes.io/part-of: rancher-monitoring
+spec:
+  groups:
+  - name: flask-alerts
+    rules:
+    - alert: FlaskHighCpu
+      # Query corrigida (container!="") e threshold ajustado
+      expr: sum(rate(container_cpu_usage_seconds_total{namespace="flask-prod", container!=""}[1m])) by (pod, namespace) > 0.05
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "CPU Alta: {{ $labels.pod }}"
+        description: "O pod {{ $labels.pod }} está usando {{ $value }} de CPU."
