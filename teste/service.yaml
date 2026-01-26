@@ -15,15 +15,17 @@
 #      nodePort: 30080  # <--- Fixamos a porta externa (deve ser entre 30000-32767)
 #
 #OKE
+
 apiVersion: v1
 kind: Service
 metadata:
-  name: flask-web #Nome interno
+  name: flask-web
   namespace: flask-prod
 spec:
-  type: ClusterIP   # IMPORTANTE: Na OKE com Ingress, use ClusterIP, não LoadBalancer
+  type: ClusterIP
   selector:
-    app: flask-web    # Tem que bater com o label do seu Pod/Deployment
+    app: flask-web
   ports:
-    - port: 80      # Porta que o Ingress vai chamar
-      targetPort: 8080 # Porta que seu container escuta
+    - name: http
+      port: 80          # Porta que o Ingress chama
+      targetPort: 8080  # Porta do container
