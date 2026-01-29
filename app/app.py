@@ -10,7 +10,7 @@ metrics.info('app_info', 'Application info', version='1.0.3')
 @app.route('/')
 def hello():
   ##return 'Olá, mundo! 👋', 200
-    return 'CI - CD com ARGO-CD e GitHub - RollingUpdate... 🚀 Agora temos Cluster GKE', 200
+    return 'CI - CD com Fleet e GitHub - RollingUpdate... 🚀 Agora temos Cluster GKE e ARGO-CD', 200
 
 if __name__ == '__main__':
     # Importante: host 0.0.0.0 para funcionar no Docker
