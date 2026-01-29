@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: flask-web
-          image: ghcr.io/amsatnaf/flask-ola-mundo:edf3f9cfc944e31572575b389eb075f3a6d43eee
+          image: ghcr.io/amsatnaf/flask-ola-mundo:aa57d3a9e26f050b0480afe82b1e1dcb0ffcad69
           imagePullPolicy: Always
           resources:
             requests:
