@@ -14,6 +14,6 @@ def test_home_page(client):
     # Verifica se deu sucesso (200)
     assert response.status_code == 200
 
-    # Verifica se o texto "Rancher Fleet" está na resposta
-    # O 'b' antes das aspas significa bytes (como a internet trafega dados)
-    assert b"Rancher Fleet" in response.data
+    # Verifica se o texto "Monitoramento RUM" está na resposta (que é o novo título)
+    # O 'b' antes das aspas significa bytes
+    assert b"Monitoramento RUM" in response.data
