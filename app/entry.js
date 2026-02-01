@@ -4,10 +4,14 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 
 function setupRUM(serviceName, collectorUrl) {
-    console.log("Iniciando RUM (Modo MacGyver) para:", serviceName);
+    console.log("☢️ Iniciando RUM (Modo Nuclear)...");
 
     const exporter = new OTLPTraceExporter({ url: collectorUrl });
     const consoleExporter = new ConsoleSpanExporter();
+    
+    // Processadores que queremos adicionar
+    const p1 = new SimpleSpanProcessor(exporter);
+    const p2 = new SimpleSpanProcessor(consoleExporter);
 
     const resource = resourceFromAttributes({
         [SemanticResourceAttributes.SERVICE_NAME]: serviceName,
@@ -16,25 +20,31 @@ function setupRUM(serviceName, collectorUrl) {
 
     const provider = new BasicTracerProvider({ resource });
 
-    // --- O PULO DO GATO ---
-    // Tenta adicionar do jeito normal. Se der erro, usa a propriedade interna que vimos no log.
-    function safeAddProcessor(proc) {
+    // --- A CIRURGIA ---
+    try {
+        // Tentativa 1: O jeito certo (provavelmente vai falhar)
         if (typeof provider.addSpanProcessor === 'function') {
-            provider.addSpanProcessor(proc);
-        } else if (provider._activeSpanProcessor) {
-            console.warn("⚠️ Usando acesso direto ao _activeSpanProcessor");
-            provider._activeSpanProcessor.addSpanProcessor(proc);
-        } else {
-            console.error("❌ Não foi possível adicionar o processador!");
+            console.log("✅ Usando addSpanProcessor padrão");
+            provider.addSpanProcessor(p1);
+            provider.addSpanProcessor(p2);
+        } 
+        // Tentativa 2: Injeção direta na lista interna do MultiSpanProcessor
+        else if (provider._activeSpanProcessor && Array.isArray(provider._activeSpanProcessor._spanProcessors)) {
+            console.warn("⚠️ Injetando direto no Array _spanProcessors");
+            provider._activeSpanProcessor._spanProcessors.push(p1);
+            provider._activeSpanProcessor._spanProcessors.push(p2);
         }
+        // Tentativa 3: Se tudo falhar, tenta achar onde os processadores estão escondidos
+        else {
+             console.error("❌ Estrutura desconhecida:", provider);
+        }
+    } catch (e) {
+        console.error("Erro na injeção:", e);
     }
-
-    safeAddProcessor(new SimpleSpanProcessor(exporter));
-    safeAddProcessor(new SimpleSpanProcessor(consoleExporter));
 
     provider.register();
 
-    return provider.getTracer('rum-macgyver');
+    return provider.getTracer('rum-nuclear');
 }
 
 window.otel = { setupRUM };
