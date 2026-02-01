@@ -13,7 +13,7 @@ OTEL_RUM_CONFIG = """
   import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.27.0';
 
   // 2. Imports de LOGS (Novidade!)
-  import { LoggerProvider, SimpleLogRecordProcessor } from 'https://esm.sh/@opentelemetry/sdk-logs-web@0.57.1';
+  import { LoggerProvider, SimpleLogRecordProcessor } from 'https://esm.sh/@opentelemetry/sdk-logs@0.57.1';
   import { OTLPLogExporter } from 'https://esm.sh/@opentelemetry/exporter-logs-otlp-http@0.57.1';
   import { SeverityNumber } from 'https://esm.sh/@opentelemetry/api-logs@0.57.1';
 
