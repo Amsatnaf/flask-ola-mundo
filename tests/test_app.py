@@ -25,36 +25,25 @@ def client():
 # Ela recebe o 'client' que criamos ali em cima.
 def test_home_page(client):
     """
-    Docstring: Testa se a pagina inicial responde 200 OK 
-    E se contém a correção crítica do RUM v3.1.0
+    Testa se a página carrega e se a versão v3.2.0 (com Link de Logs) está ativa.
     """
-    
-    # 5. AÇÃO: O cliente simulado faz um GET (acessa) a rota raiz ('/').
-    # A resposta do servidor (HTML, Status Code, Headers) fica guardada na variável 'response'.
+    # 1. Faz a requisição ao site
     response = client.get('/')
 
-    # -----------------------------------------------------------------------
-    # VALIDAÇÕES (ASSERTS) - Onde o teste passa ou falha
-    # -----------------------------------------------------------------------
-
-    # 6. Verifica o STATUS da resposta HTTP.
-    # 200 significa "OK/Sucesso". Se fosse 404 (Não achou) ou 500 (Erro), o teste falharia aqui.
+    # 2. Verifica se o site está NO AR (Código 200 OK)
     assert response.status_code == 200
 
-    # 7. Verifica se o texto "Monitoramento Full" existe dentro dos dados da resposta (response.data).
-    # O 'b' antes das aspas indica que estamos procurando BYTES, não texto normal (string),
-    # pois o Flask retorna o HTML cru em formato de bytes.
-    assert b"Monitoramento Full" in response.data
+    # 3. Verifica se o TÍTULO VISUAL mudou para a versão nova
+    # No app.py colocamos: <h1>Monitoramento RUM v3.2 🚀</h1>
+    # O 'b' é necessário porque o response.data vem em bytes.
+    # Usamos uma parte do texto para facilitar.
+    assert b"Monitoramento RUM v3.2" in response.data
 
-    # 8. VERIFICAÇÃO DE VERSÃO (CRÍTICO):
-    # Aqui procuramos exatamente pelo trecho de código JavaScript que define a versão.
-    # Isso garante que o arquivo app.py está rodando a versão 3.1.0 com o fix dos logs.
-    # Se alguém subir a versão 2.0.0 ou 3.0.0 antiga, esse teste falha e bloqueia o deploy.
-    assert b"SERVICE_VERSION]: '3.1.0'" in response.data
-    
-    # 9. (Opcional) Verifica a mensagem de log no console.
-    # Explicação do comando complexo abaixo:
-    # A resposta original contém acentos UTF-8 (ç e ã) em bytes (\xc3\xa7 e \xc3\xa3).
-    # O comando .replace() troca esses bytes estranhos por "ca" (ASCII simples).
-    # Assim, podemos procurar por "Correcao" sem nos preocuparmos com erros de codificação.
-    assert b"Iniciando RUM (Correcao de Link)" in response.data.replace(b'\xc3\xa7\xc3\xa3', b'ca')
+    # 4. VERIFICAÇÃO TÉCNICA (A mais importante):
+    # Garante que o código JavaScript contém a configuração da versão 3.2.0
+    # Se essa linha falhar, significa que você esqueceu de atualizar o script do RUM.
+    assert b"SERVICE_VERSION]: '3.2.0'" in response.data
+
+    # 5. Verifica se a flag de correção de logs (TraceFlags: 1) está presente
+    # Isso garante que a lógica de "Forçar Link" que criamos realmente existe no código.
+    assert b"traceFlags: 1" in response.data
