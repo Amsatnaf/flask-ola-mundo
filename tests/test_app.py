@@ -25,25 +25,23 @@ def client():
 # Ela recebe o 'client' que criamos ali em cima.
 def test_home_page(client):
     """
-    Testa se a página carrega e se a versão v3.2.0 (com Link de Logs) está ativa.
+    Testa se a página carrega e se a versão v3.3.0 (Fix JS Hex->Bytes) está ativa.
     """
-    # 1. Faz a requisição ao site
+    # 1. Faz a requisição
     response = client.get('/')
 
-    # 2. Verifica se o site está NO AR (Código 200 OK)
+    # 2. Verifica se o site está NO AR
     assert response.status_code == 200
 
-    # 3. Verifica se o TÍTULO VISUAL mudou para a versão nova
-    # No app.py colocamos: <h1>Monitoramento RUM v3.2 🚀</h1>
-    # O 'b' é necessário porque o response.data vem em bytes.
-    # Usamos uma parte do texto para facilitar.
-    assert b"Monitoramento RUM v3.2" in response.data
+    # 3. Verifica se o TÍTULO VISUAL foi atualizado
+    # No app.py v3.3 colocamos: <h1>RUM v3.3: Hex -> Bytes 🛠️</h1>
+    assert b"RUM v3.3" in response.data
 
-    # 4. VERIFICAÇÃO TÉCNICA (A mais importante):
-    # Garante que o código JavaScript contém a configuração da versão 3.2.0
-    # Se essa linha falhar, significa que você esqueceu de atualizar o script do RUM.
-    assert b"SERVICE_VERSION]: '3.2.0'" in response.data
+    # 4. VERIFICAÇÃO TÉCNICA DE VERSÃO:
+    # Garante que a variável de versão foi atualizada
+    assert b"SERVICE_VERSION]: '3.3.0'" in response.data
 
-    # 5. Verifica se a flag de correção de logs (TraceFlags: 1) está presente
-    # Isso garante que a lógica de "Forçar Link" que criamos realmente existe no código.
-    assert b"traceFlags: 1" in response.data
+    # 5. VERIFICAÇÃO DA CORREÇÃO (NOVO):
+    # Verifica se a função 'hexToBytes' existe no código fonte da página.
+    # Isso garante que a lógica de conversão que adicionamos está lá.
+    assert b"function hexToBytes(hex)" in response.data
