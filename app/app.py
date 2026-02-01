@@ -3,106 +3,107 @@ from flask import Flask
 app = Flask(__name__)
 
 # Configuração RUM via CDN (Trace + Logs Integrados)
+# Configuração RUM via CDN (Versões Alinhadas e Corrigidas)
 OTEL_RUM_CONFIG = """
 <script type="module">
-  // 1. Imports de Trace
-  import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.18.1';
-  import { OTLPTraceExporter } from 'https://esm.sh/@opentelemetry/exporter-trace-otlp-http@0.57.1';
-  import { SimpleSpanProcessor, ConsoleSpanExporter } from 'https://esm.sh/@opentelemetry/sdk-trace-base@1.18.1';
-  import { Resource } from 'https://esm.sh/@opentelemetry/resources@1.18.1';
-  import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.27.0';
+  // ---------------------------------------------------------
+  // 1. IMPORTS ATUALIZADOS (Versões Compatíveis 2026)
+  // ---------------------------------------------------------
+  // Core e Tracing (v1.30.1)
+  import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.30.1';
+  import { SimpleSpanProcessor, ConsoleSpanExporter } from 'https://esm.sh/@opentelemetry/sdk-trace-base@1.30.1';
+  import { Resource } from 'https://esm.sh/@opentelemetry/resources@1.30.1';
+  import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.28.0';
+  
+  // Logs e Exporters (v0.57.2 - A mais recente para Logs/HTTP)
+  import { OTLPTraceExporter } from 'https://esm.sh/@opentelemetry/exporter-trace-otlp-http@0.57.2';
+  import { LoggerProvider, SimpleLogRecordProcessor } from 'https://esm.sh/@opentelemetry/sdk-logs@0.57.2';
+  import { OTLPLogExporter } from 'https://esm.sh/@opentelemetry/exporter-logs-otlp-http@0.57.2';
+  import { SeverityNumber } from 'https://esm.sh/@opentelemetry/api-logs@0.57.2';
 
-  // 2. Imports de LOGS (Novidade!)
-  import { LoggerProvider, SimpleLogRecordProcessor } from 'https://esm.sh/@opentelemetry/sdk-logs@0.57.1';
-  import { OTLPLogExporter } from 'https://esm.sh/@opentelemetry/exporter-logs-otlp-http@0.57.1';
-  import { SeverityNumber } from 'https://esm.sh/@opentelemetry/api-logs@0.57.1';
-
-  console.log("🚀 Iniciando RUM Profissional (Trace + Logs)...");
+  console.log("🚀 Iniciando RUM (Versão Blindada)...");
 
   try {
-      // --- CONFIG COMUM (Resource) ---
-      // Define quem é o serviço uma única vez para usar em Traces e Logs
+      // Configuração do Recurso (Quem sou eu)
       const resource = new Resource({
           [SemanticResourceAttributes.SERVICE_NAME]: 'flask-frontend-rum',
-          [SemanticResourceAttributes.SERVICE_VERSION]: '2.0.0', // Versão atualizada
+          [SemanticResourceAttributes.SERVICE_VERSION]: '3.0.0', // Nova versão
           'deployment.type': 'cdn_loading',
           'env': 'production'
       });
 
       // ==========================================
-      // PARTE A: CONFIGURAÇÃO DE TRACES
+      // PARTE A: TRACES (Latência)
       // ==========================================
       const collectorTraceUrl = 'https://otel-collector.129-213-28-76.sslip.io/v1/traces';
       const traceExporter = new OTLPTraceExporter({ url: collectorTraceUrl });
       
       const tracerProvider = new WebTracerProvider({ resource });
       tracerProvider.addSpanProcessor(new SimpleSpanProcessor(traceExporter));
-      tracerProvider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter())); // Debug local
+      tracerProvider.addSpanProcessor(new SimpleSpanProcessor(new ConsoleSpanExporter())); // Debug
       tracerProvider.register();
 
       const tracer = tracerProvider.getTracer('flask-rum-cdn');
       
-      // Inicia o Trace Principal (Span Raiz)
+      // Inicia o Trace
       const rootSpan = tracer.startSpan('carregamento_via_cdn', {
           startTime: performance.timeOrigin
       });
 
       // ==========================================
-      // PARTE B: CONFIGURAÇÃO DE LOGS (O Pulo do Gato)
+      // PARTE B: LOGS (Vinculados)
       // ==========================================
-      const collectorLogUrl = 'https://otel-collector.129-213-28-76.sslip.io/v1/logs'; // Note: /v1/logs
+      const collectorLogUrl = 'https://otel-collector.129-213-28-76.sslip.io/v1/logs';
       const logExporter = new OTLPLogExporter({ url: collectorLogUrl });
       
       const loggerProvider = new LoggerProvider({ resource });
-      // Usamos SimpleLogRecordProcessor para garantir envio imediato no teste
       loggerProvider.addLogRecordProcessor(new SimpleLogRecordProcessor(logExporter));
       
       const logger = loggerProvider.getLogger('flask-frontend-logger');
 
-      // --- FUNÇÃO AUXILIAR PROFISSIONAL ---
-      // Essa função envia o log para o SigNoz JÁ CONECTADO ao Trace ID atual
+      // --- FUNÇÃO DE ENVIO DE LOGS ---
       window.logToSigNoz = (message, severity = 'INFO') => {
+          // Pega o contexto do span atual
+          const ctx = rootSpan.spanContext();
           
-          // Pega o contexto do Span atual (Trace ID e Span ID)
-          const spanContext = rootSpan.spanContext();
+          // DEBUG VISUAL: Mostra no console o ID que estamos tentando enviar
+          console.log(`📝 [RUM DEBUG] Log: "${message}" | TraceID: ${ctx.traceId}`);
 
           logger.emit({
               body: message,
               severityNumber: severity === 'ERROR' ? SeverityNumber.ERROR : SeverityNumber.INFO,
               severityText: severity,
               timestamp: new Date(),
-              // AQUI ESTÁ O SEGREDO: Injetamos o ID do Trace no Log
-              traceId: spanContext.traceId,
-              spanId: spanContext.spanId,
+              // AQUI ESTÁ A CHAVE: Passamos os IDs explicitamente
+              traceId: ctx.traceId,
+              spanId: ctx.spanId,
               attributes: {
-                  'browser.language': navigator.language,
-                  'page.url': window.location.href
+                  'page.url': window.location.href,
+                  'user_agent': navigator.userAgent
               }
           });
-          
-          // Também mostra no console do navegador para debug
-          console.log(`[SigNoz Sent] ${message}`);
       };
 
       // ==========================================
-      // FINALIZAÇÃO DO CARREGAMENTO
+      // GATILHOS
       // ==========================================
       window.addEventListener('load', () => {
-          // 1. Envia um Log dizendo que carregou
+          // 1. Envia Log (Com o Trace ainda aberto)
           window.logToSigNoz("Página totalmente carregada!", "INFO");
           
-          // 2. Finaliza o Span (Trace)
-          rootSpan.end();
-          console.log(`%c [SUCESSO] Trace e Logs configurados`, 'color: #00ff00; background: #333; padding: 4px;');
+          // 2. Finaliza Trace (Pequeno delay para garantir ordem)
+          setTimeout(() => {
+              rootSpan.end();
+              console.log("✅ Trace finalizado e enviado.");
+          }, 100);
       });
 
-      // Captura erros globais e manda pro SigNoz
-      window.addEventListener('error', (event) => {
-          window.logToSigNoz(`Erro JS detectado: ${event.message}`, "ERROR");
+      window.addEventListener('error', (e) => {
+          window.logToSigNoz(`Erro JS: ${e.message}`, "ERROR");
       });
 
   } catch (e) {
-      console.error("❌ Erro na configuração RUM:", e);
+      console.error("❌ Erro Crítico no RUM:", e);
   }
 </script>
 """
