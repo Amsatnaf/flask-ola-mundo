@@ -66,7 +66,7 @@ def hello():
     <head><meta charset="UTF-8"><title>Full Stack RUM</title>{OTEL_RUM_CONFIG}</head>
     <body style="font-family: sans-serif; text-align: center; padding: 50px;">
         <h1>Full Stack Monitor 🚀</h1>
-        <p>Agora o botão bate no Backend!</p>
+        <p>RUM completo, Frontend e Backend</p>
         <button style="padding:15px; background:blue; color:white;" onclick="window.realAction('COMPRAR')">🛒 Comprar (POST)</button>
         <button style="padding:15px; background:red; color:white;" onclick="window.realAction('ERROR')">❌ Erro (POST)</button>
     </body>
