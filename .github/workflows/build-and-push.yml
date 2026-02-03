@@ -47,8 +47,8 @@ jobs:
           push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling') }}
           # MUDANÇA 2: A tag :latest só é gerada se for na main (PROTEÇÃO)  
           tags: |
-            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-ola-mundo:latest' || '' }}
-            ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-web:latest' || '' }}
+            ghcr.io/amsatnaf/flask-web:${{ github.sha }}
 
       - name: Update Kubernetes Manifest
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -58,7 +58,7 @@ jobs:
           
           FILE_PATH="prod/deployment.yaml"
           
-          sed -i "s|image: ghcr.io/amsatnaf/flask-ola-mundo:.*|image: ghcr.io/amsatnaf/flask-ola-mundo:${{ github.sha }}|g" $FILE_PATH
+          sed -i "s|image: ghcr.io/amsatnaf/flask-web:.*|image: ghcr.io/amsatnaf/flask-web:${{ github.sha }}|g" $FILE_PATH
           
           git add $FILE_PATH
           git commit -m "chore(ci): update image tag to ${{ github.sha }}"
