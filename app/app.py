@@ -3,7 +3,7 @@ from flask import Flask, jsonify
 
 app = Flask(__name__)
 
-# Bloco de configuração RUM com FetchInstrumentation
+# Bloco RUM com instrumentação completa
 OTEL_RUM_CONFIG = """
 <script type="module">
   import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.30.1';
@@ -12,6 +12,7 @@ OTEL_RUM_CONFIG = """
   import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.28.0';
   import { OTLPTraceExporter } from 'https://esm.sh/@opentelemetry/exporter-trace-otlp-http@0.57.2';
   import { FetchInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-fetch@0.34.0';
+  import { XMLHttpRequestInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-xml-http-request@0.34.0';
 
   try {
       const resource = new Resource({
@@ -27,19 +28,21 @@ OTEL_RUM_CONFIG = """
       tracerProvider.register();
       const tracer = tracerProvider.getTracer('flask-rum-cdn');
 
-      // Instrumenta fetch para propagar traceparent
+      // Instrumenta todas as chamadas HTTP
       new FetchInstrumentation({
-        propagateTraceHeaderCorsUrls: [/\\/checkout/],
+        propagateTraceHeaderCorsUrls: [/\\/checkout/, /\\//], // inclui GET /
+      });
+      new XMLHttpRequestInstrumentation({
+        propagateTraceHeaderCorsUrls: [/\\/checkout/, /\\//],
       });
 
-      // 1. Trace de Load
+      // Span de carregamento da página
       const loadSpan = tracer.startSpan('page_load', { startTime: performance.timeOrigin });
-      window.addEventListener('load', () => setTimeout(() => loadSpan.end(), 100));
+      window.addEventListener('load', () => loadSpan.end());
 
-      // 2. Função Inteligente
+      // Função para interações do usuário
       window.realAction = (actionType) => {
           console.log(`Disparando ação: ${actionType}`);
-          
           const span = tracer.startSpan('user_interaction', { attributes: { 'action': actionType } });
           span.addEvent('Iniciando requisição ao backend...');
 
@@ -68,7 +71,7 @@ def hello():
     <body style="font-family: sans-serif; text-align: center; padding: 50px;">
         <h1>Full Stack Monitor 🚀</h1>
         <p>RUM completo</p>
-        <p>Frontend e Backend.</p>
+        <p>Frontend e Backend</p>
         <button style="padding:15px; background:blue; color:white;" onclick="window.realAction('COMPRAR')">🛒 Comprar (POST)</button>
         <button style="padding:15px; background:red; color:white;" onclick="window.realAction('ERROR')">❌ Erro (POST)</button>
     </body>
@@ -77,7 +80,7 @@ def hello():
 
 @app.route('/checkout', methods=['POST'])
 def checkout_backend():
-    time.sleep(0.1)  # simula processamento de 100ms
+    time.sleep(0.1)  # simula processamento
     return jsonify({"status": "compra_realizada", "message": "O Python processou isso!"})
 
 if __name__ == '__main__':
