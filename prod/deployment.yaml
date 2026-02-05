@@ -19,16 +19,43 @@ spec:
     metadata:
       labels:
         app: flask-web
-      annotations: # ---------------------------------------------------------
-        # A MÁGICA ACONTECE AQUI:
-        # Dizemos para injetar o agente Python usando a config do namespace 'signoz'
+      annotations:
+        # Mantendo sua injeção automática do SigNoz
         instrumentation.opentelemetry.io/inject-python: "signoz/signoz-instrumentation"
-        # --------------------------------------------------------------------
     spec:
       containers:
         - name: flask-web
+          # Atenção: Seu pipeline de CI/CD deve atualizar essa hash da imagem automaticamente
           image: ghcr.io/amsatnaf/flask-web:3867469f25c6b5ff4c39b548398b0ad16c159703
           imagePullPolicy: Always
+          
+          # --- NOVO BLOCO: CONEXÃO COM O BANCO DE DADOS ---
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: DB_PASS
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: DB_HOST
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: DB_NAME
+            # Opcional: Garante que o nome do serviço bata com o que definimos no Python
+            - name: OTEL_SERVICE_NAME
+              value: "flask-backend-oci"
+          # ------------------------------------------------
+          
           resources:
             requests:
               memory: "64Mi"

@@ -2,3 +2,10 @@ flask
 prometheus-flask-exporter
 flake8
 pytest
+flask-sqlalchemy
+pymysql
+cryptography
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-sqlalchemy
