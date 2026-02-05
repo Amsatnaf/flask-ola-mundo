@@ -48,7 +48,7 @@ RUM_HTML = """
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Loja RUM - DB Trace</title>
+    <title>Loja RUM - Dashboards Fix</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f4f4f9; padding: 50px; }
         .card { background: white; max-width: 400px; margin: auto; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -87,31 +87,25 @@ RUM_HTML = """
       
       const tracer = provider.getTracer('loja-frontend');
 
+      // Page Load (Opcional, mas bom ter)
       window.addEventListener('load', () => {
           const pageLoadSpan = tracer.startSpan('page_load');
-          console.log("🕒 [RUM] Page Load Iniciado...");
-          setTimeout(() => {
-              pageLoadSpan.end();
-              console.log("🕒 [RUM] Page Load Finalizado.");
-          }, 100);
+          setTimeout(() => { pageLoadSpan.end(); }, 100);
       });
 
       window.acao = (tipo) => {
-          // 1. MUDANÇA: Nome do span agora é dinâmico (click_comprar ou click_erro)
-          // Isso separa as linhas no gráfico de contagem automaticamente.
-          const spanName = `click_${tipo}`; 
-          const span = tracer.startSpan(spanName, {
+          // 1. AJUSTE PARA SEU DASHBOARD: 
+          // Nome fixo 'user_interaction' para seu filtro funcionar.
+          // Atributo 'action' define se é 'compra' ou 'erro' para o agrupamento (Group By).
+          const span = tracer.startSpan('user_interaction', {
               attributes: { 
-                  'app.component': 'botao',
-                  'app.acao': tipo
+                  'action': tipo === 'comprar' ? 'compra' : 'erro',
+                  'app.component': 'botao'
               }
           });
           
           const endpoint = tipo === 'comprar' ? '/checkout' : '/simular_erro';
-          
-          // 2. MUDANÇA: Logs explícitos no Console do Navegador
-          console.info(`🚀 [AÇÃO] Usuário clicou em: ${tipo.toUpperCase()}`);
-          console.log(`📡 [REDE] Enviando POST para: ${endpoint}...`);
+          console.info(`🚀 [AÇÃO] Usuário: ${tipo.toUpperCase()}`);
           
           document.getElementById('status').innerText = "Processando...";
 
@@ -120,26 +114,26 @@ RUM_HTML = """
                 .then(r => r.json().then(data => ({status: r.status, body: data})))
                 .then(res => { 
                     if(res.status === 200) {
-                        const msg = `✅ Sucesso! ID: ${res.body.id}`;
-                        document.getElementById('status').innerText = msg;
+                        document.getElementById('status').innerText = `✅ Sucesso! ID: ${res.body.id}`;
                         document.getElementById('status').style.color = "green";
-                        console.log(`✅ [SUCESSO] Pedido criado. ID Banco: ${res.body.id}`);
                         
+                        // Sucesso = Status Code 1 (UNSET/OK)
                         span.setStatus({ code: SpanStatusCode.OK });
                     } else {
-                        const msg = `❌ Erro: ${res.body.msg}`;
-                        document.getElementById('status').innerText = msg;
+                        document.getElementById('status').innerText = `❌ Erro: ${res.body.msg}`;
                         document.getElementById('status').style.color = "red";
-                        console.error(`❌ [ERRO] Backend respondeu: ${res.body.msg}`);
                         
+                        // 2. AJUSTE PARA SEU DASHBOARD DE ERRO:
+                        // Falha = Status Code 2 (ERROR). Isso ativa sua query 'status_code = 2'.
                         span.setStatus({ code: SpanStatusCode.ERROR, message: res.body.msg });
                     }
                     span.end(); 
                 })
                 .catch(e => { 
-                    console.error("🔥 [CRASH] Erro de rede ou JS:", e);
-                    document.getElementById('status').innerText = "Erro de Rede/Console"; 
+                    console.error("🔥 Erro JS:", e);
+                    document.getElementById('status').innerText = "Erro Crítico"; 
                     span.recordException(e);
+                    // Garante que erro de rede também conta como status_code = 2
                     span.setStatus({ code: SpanStatusCode.ERROR });
                     span.end(); 
                 });
@@ -150,9 +144,9 @@ RUM_HTML = """
 <body>
     <div class="card">
         <h1>🛍️ Loja RUM</h1>
-        <p>Console do Navegador (F12) mostra detalhes agora.</p>
-        <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR (Insert DB)</button>
-        <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO (Simulação)</button>
+        <p>Dashboards alinhados com SigNoz</p>
+        <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR (Gera 'action': 'compra')</button>
+        <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO (Gera 'action': 'erro')</button>
         <div id="status">Aguardando ação...</div>
     </div>
 </body>
@@ -167,10 +161,8 @@ def home():
 def checkout():
     tracer = trace.get_tracer(__name__)
     
-    # 3. MUDANÇA: Detalhes Explícitos do Banco de Dados
-    # - Mudamos o nome do span para 'DB_INSERT_PEDIDO'
-    # - http.method="DB_INSERT" (para aparecer bonito no gráfico)
-    # - db.system="mysql" (para o SigNoz saber que é banco de dados)
+    # 3. AJUSTE PARA SEU DASHBOARD DE MÉTODOS (BACKEND):
+    # Forçamos 'http.method' = 'DB_INSERT' para não aparecer vazio no gráfico.
     span_attributes = {
         "http.method": "DB_INSERT", 
         "db.system": "mysql",
@@ -178,7 +170,7 @@ def checkout():
         "db.table": "pedido"
     }
     
-    with tracer.start_as_current_span("DB_INSERT_PEDIDO", attributes=span_attributes) as span:
+    with tracer.start_as_current_span("processar_pagamento", attributes=span_attributes) as span:
         try:
             logger.info("Iniciando transação no banco...")
             
@@ -186,10 +178,7 @@ def checkout():
             db.session.add(novo)
             db.session.commit()
             
-            # Adiciona o ID gerado como atributo no trace
             span.set_attribute("db.row_id", novo.id)
-            
-            logger.info(f"Pedido salvo com ID: {novo.id}")
             return jsonify({"status": "sucesso", "id": novo.id})
             
         except Exception as e:
@@ -202,11 +191,16 @@ def checkout():
 def simular_erro():
     tracer = trace.get_tracer(__name__)
     
-    # Marcamos como erro interno explicitamente
-    with tracer.start_as_current_span("SIMULACAO_ERRO_GATEWAY", attributes={"http.method": "INTERNAL_ERROR"}) as span:
+    # 4. AJUSTE PARA O GRÁFICO:
+    # Forçamos 'http.method' = 'INTERNAL_ERROR' para aparecer bonito no gráfico de linhas.
+    span_attributes = {
+        "http.method": "INTERNAL_ERROR"
+    }
+    
+    with tracer.start_as_current_span("simulacao_falha", attributes=span_attributes) as span:
         try:
             logger.error("Simulação de erro solicitada!")
-            raise Exception("Gateway de Pagamento: Timeout (Simulado)")
+            raise Exception("Gateway de Pagamento: Indisponível (Simulação)")
         except Exception as e:
             span.record_exception(e)
             span.set_status(Status(StatusCode.ERROR))
