@@ -50,3 +50,24 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
+
+          # --- CORREÇÃO DE INDENTAÇÃO AQUI ---
+          # O 'env' deve estar alinhado com 'livenessProbe', 'image', etc.
+          env:
+            # --- Variáveis Fixas ---
+            - name: DB_HOST
+              value: "34.44.72.27"
+            - name: DB_NAME
+              value: "loja_rum"
+
+            # --- Variáveis Secretas ---
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: username
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-gcp-creds
+                  key: password

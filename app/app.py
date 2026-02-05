@@ -1,93 +1,105 @@
 import time
-from flask import Flask, jsonify
+import os
+import logging
+from flask import Flask, jsonify, request
+from flask_sqlalchemy import SQLAlchemy
+from opentelemetry import trace
+
+# Pega o tracer que o SigNoz injetou
+tracer = trace.get_tracer(__name__)
 
 app = Flask(__name__)
 
-# Bloco RUM com propagador W3C e instrumentação completa
-OTEL_RUM_CONFIG = """
-<script type="module">
-  import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.30.1';
-  import { SimpleSpanProcessor, BatchSpanProcessor } from 'https://esm.sh/@opentelemetry/sdk-trace-base@1.30.1';
-  import { Resource } from 'https://esm.sh/@opentelemetry/resources@1.30.1';
-  import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.28.0';
-  import { OTLPTraceExporter } from 'https://esm.sh/@opentelemetry/exporter-trace-otlp-http@0.57.2';
-  import { FetchInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-fetch@0.34.0';
-  import { XMLHttpRequestInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-xml-http-request@0.34.0';
-  import { W3CTraceContextPropagator } from 'https://esm.sh/@opentelemetry/core@1.30.1';
-  import { propagation } from 'https://esm.sh/@opentelemetry/api@1.7.0';
+# Configurações de Banco (Lê das variáveis de ambiente do K8s)
+db_user = os.getenv("DB_USER", "root")
+db_pass = os.getenv("DB_PASS", "senha")
+db_host = os.getenv("DB_HOST", "127.0.0.1")
+db_name = os.getenv("DB_NAME", "loja_rum")
 
-  try {
-      const resource = new Resource({
-          [SemanticResourceAttributes.SERVICE_NAME]: 'flask-frontend-rum',
-          'deployment.type': 'production_real',
-          'env': 'production'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280, 'pool_pre_ping': True}
+
+db = SQLAlchemy(app)
+
+class Pedido(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    produto = db.Column(db.String(50))
+    status = db.Column(db.String(20))
+    valor = db.Column(db.Float)
+    timestamp_epoch = db.Column(db.Float)
+
+# Tenta criar tabelas ao iniciar (se falhar, loga o erro mas não crasha o app)
+with app.app_context():
+    try:
+        db.create_all()
+        print(f"INFO: Conectado ao banco em {db_host}")
+    except Exception as e:
+        print(f"ERRO DE CONEXAO DB: {e}")
+
+# --- HTML RUM (Otimizado) ---
+RUM_HTML = """
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste Conexão DB</title>
+    <script type="module">
+      import { context, trace } from 'https://esm.sh/@opentelemetry/api@1.7.0';
+      import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.30.1';
+      import { BatchSpanProcessor } from 'https://esm.sh/@opentelemetry/sdk-trace-base@1.30.1';
+      import { Resource } from 'https://esm.sh/@opentelemetry/resources@1.30.1';
+      import { SemanticResourceAttributes } from 'https://esm.sh/@opentelemetry/semantic-conventions@1.28.0';
+      import { OTLPTraceExporter } from 'https://esm.sh/@opentelemetry/exporter-trace-otlp-http@0.57.2';
+      import { FetchInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-fetch@0.34.0';
+      import { W3CTraceContextPropagator } from 'https://esm.sh/@opentelemetry/core@1.30.1';
+
+      const provider = new WebTracerProvider({
+          resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: 'flask-frontend-teste' })
       });
+      provider.addSpanProcessor(new BatchSpanProcessor(new OTLPTraceExporter({ 
+          url: 'https://otel-collector.129-213-28-76.sslip.io/v1/traces' 
+      })));
+      provider.register({ propagator: new W3CTraceContextPropagator() });
+      
+      new FetchInstrumentation({ propagateTraceHeaderCorsUrls: [/.+/] }).setTracerProvider(provider);
+      const tracer = provider.getTracer('frontend-teste');
 
-      const collectorTraceUrl = 'https://otel-collector.129-213-28-76.sslip.io/v1/traces';
-      const traceExporter = new OTLPTraceExporter({ url: collectorTraceUrl });
-      const tracerProvider = new WebTracerProvider({ resource });
-      tracerProvider.addSpanProcessor(new BatchSpanProcessor(traceExporter)); // batching para reduzir overhead
-      tracerProvider.register();
-
-      // Define propagador W3C para garantir envio do traceparent
-      propagation.setGlobalPropagator(new W3CTraceContextPropagator());
-
-      const tracer = tracerProvider.getTracer('flask-rum-cdn');
-
-      // Instrumenta todas as chamadas HTTP
-      new FetchInstrumentation({
-        propagateTraceHeaderCorsUrls: [/\\/checkout/, /\\//], // inclui GET /
-      });
-      new XMLHttpRequestInstrumentation({
-        propagateTraceHeaderCorsUrls: [/\\/checkout/, /\\//],
-      });
-
-      // Span de carregamento da página
-      const loadSpan = tracer.startSpan('page_load', { startTime: performance.timeOrigin });
-      window.addEventListener('load', () => loadSpan.end());
-
-      // Função para interações do usuário
-      window.realAction = (actionType) => {
-          console.log(`Disparando ação: ${actionType}`);
-          const span = tracer.startSpan('user_interaction', { attributes: { 'action': actionType } });
-          span.addEvent('Iniciando requisição ao backend...');
-
-          fetch('/checkout', { method: 'POST' })
-            .then(response => {
-                span.addEvent('Resposta do Backend Recebida');
-                if(actionType === 'ERROR') throw new Error("Simulação de Erro");
-                span.end();
-            })
-            .catch(err => {
-                span.setStatus({ code: 2, message: err.message });
-                span.end();
-            });
+      window.acao = (tipo) => {
+          const span = tracer.startSpan(`click_${tipo}`);
+          context.with(trace.setSpan(context.active(), span), () => {
+              fetch('/checkout', { method: 'POST' })
+                .then(r => r.json())
+                .then(d => { alert(d.status + " - ID: " + d.id); span.end(); })
+                .catch(e => { alert("Erro: " + e); span.end(); });
+          });
       };
-
-  } catch (e) { console.error(e); }
-</script>
+    </script>
+</head>
+<body style="padding: 50px; text-align: center;">
+    <h1>🧪 Ambiente de Teste</h1>
+    <button onclick="window.acao('teste_db')" style="padding: 20px; font-size: 20px;">TESTAR BANCO AGORA</button>
+</body>
+</html>
 """
 
 @app.route('/')
-def hello():
-    return f"""
-    <!DOCTYPE html>
-    <html lang="pt-br">
-    <head><meta charset="UTF-8"><title>Full Stack RUM</title>{OTEL_RUM_CONFIG}</head>
-    <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-        <h1>Full Stack Monitor 🚀</h1>
-        <p>RUM completo !</p>
-        <p>Frontend e Backend</p>
-        <button style="padding:15px; background:blue; color:white;" onclick="window.realAction('COMPRAR')">🛒 Comprar (POST)</button>
-        <button style="padding:15px; background:red; color:white;" onclick="window.realAction('ERROR')">❌ Erro (POST)</button>
-    </body>
-    </html>
-    """
+def home():
+    return RUM_HTML
 
 @app.route('/checkout', methods=['POST'])
-def checkout_backend():
-    time.sleep(0.1)  # simula processamento
-    return jsonify({"status": "compra_realizada", "message": "O Python processou isso!"})
+def checkout():
+    # Cria span filho manualmente
+    with tracer.start_as_current_span("teste_insercao_banco"):
+        try:
+            # O SQLAlchemy instrumentado pelo SigNoz vai criar o span do INSERT automaticamente
+            novo = Pedido(produto="Teste Conexao", status="OK", valor=1.0, timestamp_epoch=time.time())
+            db.session.add(novo)
+            db.session.commit()
+            return jsonify({"status": "sucesso_total", "id": novo.id})
+        except Exception as e:
+            trace.get_current_span().record_exception(e)
+            return jsonify({"status": "erro_backend", "msg": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=8080, threaded=True)
