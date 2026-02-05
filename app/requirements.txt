@@ -5,8 +5,5 @@ pytest
 flask-sqlalchemy
 pymysql
 cryptography
-opentelemetry-distro
-opentelemetry-exporter-otlp
-opentelemetry-exporter-otlp-proto-http
-opentelemetry-instrumentation-flask
-opentelemetry-instrumentation-sqlalchemy
+opentelemetry-api
+opentelemetry-sdk
