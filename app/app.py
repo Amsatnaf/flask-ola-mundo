@@ -1,9 +1,10 @@
 import os
 import time
 import logging
+from urllib.parse import quote_plus
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
-# Importamos apenas o básico do OTel para pegar o Span atual (sem configurar nada manual)
+# Importamos apenas o básico do OTel para pegar o Span atual
 from opentelemetry import trace
 
 app = Flask(__name__)
@@ -13,16 +14,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # --- Configuração do Banco de Dados ---
-# Pega as variáveis que definimos no deployment.yaml
 db_user = os.getenv("DB_USER", "root")
 db_pass = os.getenv("DB_PASS", "senha")
 db_host = os.getenv("DB_HOST", "127.0.0.1")
 db_name = os.getenv("DB_NAME", "loja_rum")
 
-# String de conexão do MySQL (PyMySQL driver)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_pass}@{db_host}/{db_name}'
+# CORREÇÃO DA SENHA: 'quote_plus' resolve o problema do '@' na senha
+encoded_pass = quote_plus(db_pass)
+app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{encoded_pass}@{db_host}/{db_name}'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-# Configurações para evitar queda de conexão (pool recycle)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_recycle': 280, 'pool_pre_ping': True}
 
 db = SQLAlchemy(app)
@@ -36,7 +37,6 @@ class Pedido(db.Model):
     timestamp_epoch = db.Column(db.Float)
 
 # --- Inicialização do Banco ---
-# Tenta criar a tabela ao iniciar. Se der erro de conexão, loga mas não mata o app imediatamente.
 with app.app_context():
     try:
         db.create_all()
@@ -44,7 +44,7 @@ with app.app_context():
     except Exception as e:
         logger.error(f"❌ FALHA AO CONECTAR NO BANCO: {e}")
 
-# --- Frontend RUM (HTML + JS do OpenTelemetry) ---
+# --- Frontend RUM (HTML + JS Otimizado) ---
 RUM_HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -64,7 +64,7 @@ RUM_HTML = """
     </style>
     
     <script type="module">
-      import { context, trace } from 'https://esm.sh/@opentelemetry/api@1.7.0';
+      import { context, trace, SpanStatusCode } from 'https://esm.sh/@opentelemetry/api@1.7.0';
       import { WebTracerProvider } from 'https://esm.sh/@opentelemetry/sdk-trace-web@1.30.1';
       import { BatchSpanProcessor } from 'https://esm.sh/@opentelemetry/sdk-trace-base@1.30.1';
       import { Resource } from 'https://esm.sh/@opentelemetry/resources@1.30.1';
@@ -73,45 +73,58 @@ RUM_HTML = """
       import { FetchInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-fetch@0.34.0';
       import { W3CTraceContextPropagator } from 'https://esm.sh/@opentelemetry/core@1.30.1';
 
-      // Configura o exportador para mandar direto pro seu SigNoz (Collector)
       const provider = new WebTracerProvider({
-          resource: new Resource({ [SemanticResourceAttributes.SERVICE_NAME]: 'frontend-loja' })
+          resource: new Resource({ 
+            [SemanticResourceAttributes.SERVICE_NAME]: 'frontend-loja',
+            [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: 'producao'
+          })
       });
       
-      // ATENÇÃO: Substitua o IP abaixo pelo IP do seu Ingress/Collector se necessário.
-      // Como estamos usando sslip.io, ele deve resolver para o loadbalancer.
+      // O 'url' aqui deve apontar para o seu Collector. Se estiver usando sslip.io, mantenha assim.
       provider.addSpanProcessor(new BatchSpanProcessor(new OTLPTraceExporter({ 
           url: 'https://otel-collector.129-213-28-76.sslip.io/v1/traces' 
       })));
       
       provider.register({ propagator: new W3CTraceContextPropagator() });
       
-      // Instrumenta o 'fetch' para conectar o Frontend ao Backend no gráfico
+      // Instrumentação automática do Fetch (isso que gera o http.method real)
       new FetchInstrumentation({ propagateTraceHeaderCorsUrls: [/.+/] }).setTracerProvider(provider);
+      
       const tracer = provider.getTracer('loja-frontend');
 
       window.acao = (tipo) => {
-          const span = tracer.startSpan(`click_${tipo}`);
+          // Criamos um span manual para representar a "Ação do Usuário"
+          const span = tracer.startSpan(`interacao_usuario`, {
+              attributes: { 
+                  'app.component': 'botao_compra',
+                  'app.acao': tipo
+              }
+          });
+          
           const endpoint = tipo === 'comprar' ? '/checkout' : '/simular_erro';
           
           document.getElementById('status').innerText = "Processando...";
 
+          // Executa o fetch dentro do contexto do span manual
           context.with(trace.setSpan(context.active(), span), () => {
-              fetch(endpoint, { method: 'POST' })
+              fetch(endpoint, { method: 'POST' }) // O FetchInstrumentation vai pegar esse POST automaticamente
                 .then(r => r.json().then(data => ({status: r.status, body: data})))
                 .then(res => { 
                     if(res.status === 200) {
                         document.getElementById('status').innerText = `✅ Sucesso! ID: ${res.body.id}`;
                         document.getElementById('status').style.color = "green";
+                        span.setStatus({ code: SpanStatusCode.OK });
                     } else {
                         document.getElementById('status').innerText = `❌ Erro Capturado: ${res.body.msg}`;
                         document.getElementById('status').style.color = "red";
+                        span.setStatus({ code: SpanStatusCode.ERROR, message: res.body.msg });
                     }
                     span.end(); 
                 })
                 .catch(e => { 
                     document.getElementById('status').innerText = "Erro de Rede/Console"; 
                     span.recordException(e);
+                    span.setStatus({ code: SpanStatusCode.ERROR });
                     span.end(); 
                 });
           });
@@ -137,26 +150,31 @@ def home():
 @app.route('/checkout', methods=['POST'])
 def checkout():
     tracer = trace.get_tracer(__name__)
+    # Cria um span filho no backend para medir o tempo exato do processamento
     with tracer.start_as_current_span("processar_pagamento"):
         try:
             logger.info("Iniciando checkout...")
+            
+            # Cria o pedido
             novo = Pedido(produto="PlayStation 5", status="PAGO", valor=4500.00, timestamp_epoch=time.time())
             db.session.add(novo)
             db.session.commit()
+            
             logger.info(f"Pedido salvo com ID: {novo.id}")
             return jsonify({"status": "sucesso", "id": novo.id})
+            
         except Exception as e:
             logger.error(f"Erro no checkout: {e}")
-            # Registra a exceção no SigNoz automaticamente
+            # Registra o erro no span atual para aparecer vermelho no gráfico
             trace.get_current_span().record_exception(e)
             return jsonify({"status": "erro", "msg": str(e)}), 500
 
 @app.route('/simular_erro', methods=['POST'])
 def simular_erro():
-    # Esta rota serve para pintar o gráfico de vermelho propositalmente
     logger.error("Simulação de erro solicitada!")
-    # Lançamos um erro genérico que o agente Python vai pegar
+    # O agente automático do Python vai pegar esse raise e marcar o span como erro 500
     raise Exception("Falha de Conexão Simulada com Gateway de Pagamento")
 
 if __name__ == '__main__':
+    # Rodamos na porta 8080 (padrão do seu deployment)
     app.run(host='0.0.0.0', port=8080)
