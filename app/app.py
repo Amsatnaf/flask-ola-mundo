@@ -42,13 +42,13 @@ with app.app_context():
     except Exception as e:
         logger.error(f"❌ FALHA AO CONECTAR NO BANCO: {e}")
 
-# --- Frontend RUM ---
+# --- Frontend RUM (ATUALIZADO PARA GRAFANA CLOUD) ---
 RUM_HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Loja RUM - Dashboards Fix</title>
+    <title>Loja RUM - Grafana Cloud</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f4f4f9; padding: 50px; }
         .card { background: white; max-width: 400px; margin: auto; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -71,6 +71,15 @@ RUM_HTML = """
       import { FetchInstrumentation } from 'https://esm.sh/@opentelemetry/instrumentation-fetch@0.34.0';
       import { W3CTraceContextPropagator } from 'https://esm.sh/@opentelemetry/core@1.30.1';
 
+      // --- CONFIGURAÇÃO MANUAL GRAFANA CLOUD (RUM) ---
+      // IMPORTANTE: Isso envia o trace do navegador do cliente direto para a nuvem
+      const tempoUser = '1471033'; 
+      const tempoToken = '62d28f58-5cc3-4f65-8452-fd4f5092e5e9'; 
+      const tempoUrl = 'https://tempo-prod-17-prod-sa-east-1.grafana.net/tempo/v1/traces';
+
+      // Criação do Header de Autenticação Basic Auth
+      const authHeader = 'Basic ' + btoa(tempoUser + ':' + tempoToken);
+
       const provider = new WebTracerProvider({
           resource: new Resource({ 
             [SemanticResourceAttributes.SERVICE_NAME]: 'flask-frontend-rum',
@@ -78,29 +87,32 @@ RUM_HTML = """
           })
       });
       
-      provider.addSpanProcessor(new BatchSpanProcessor(new OTLPTraceExporter({ 
-          url: 'https://otel-collector.129-213-28-76.sslip.io/v1/traces' 
-      })));
+      const exporter = new OTLPTraceExporter({ 
+          url: tempoUrl,
+          headers: {
+              'Authorization': authHeader
+          }
+      });
+
+      provider.addSpanProcessor(new BatchSpanProcessor(exporter));
       
       provider.register({ propagator: new W3CTraceContextPropagator() });
       new FetchInstrumentation({ propagateTraceHeaderCorsUrls: [/.+/] }).setTracerProvider(provider);
       
       const tracer = provider.getTracer('loja-frontend');
 
-      // Page Load (Opcional, mas bom ter)
+      // Trace de Carregamento da Página
       window.addEventListener('load', () => {
           const pageLoadSpan = tracer.startSpan('page_load');
           setTimeout(() => { pageLoadSpan.end(); }, 100);
       });
 
       window.acao = (tipo) => {
-          // 1. AJUSTE PARA SEU DASHBOARD: 
-          // Nome fixo 'user_interaction' para seu filtro funcionar.
-          // Atributo 'action' define se é 'compra' ou 'erro' para o agrupamento (Group By).
           const span = tracer.startSpan('user_interaction', {
               attributes: { 
                   'action': tipo === 'comprar' ? 'compra' : 'erro',
-                  'app.component': 'botao'
+                  'app.component': 'botao',
+                  'target_system': 'grafana_cloud'
               }
           });
           
@@ -116,15 +128,10 @@ RUM_HTML = """
                     if(res.status === 200) {
                         document.getElementById('status').innerText = `✅ Sucesso! ID: ${res.body.id}`;
                         document.getElementById('status').style.color = "green";
-                        
-                        // Sucesso = Status Code 1 (UNSET/OK)
                         span.setStatus({ code: SpanStatusCode.OK });
                     } else {
                         document.getElementById('status').innerText = `❌ Erro: ${res.body.msg}`;
                         document.getElementById('status').style.color = "red";
-                        
-                        // 2. AJUSTE PARA SEU DASHBOARD DE ERRO:
-                        // Falha = Status Code 2 (ERROR). Isso ativa sua query 'status_code = 2'.
                         span.setStatus({ code: SpanStatusCode.ERROR, message: res.body.msg });
                     }
                     span.end(); 
@@ -133,7 +140,6 @@ RUM_HTML = """
                     console.error("🔥 Erro JS:", e);
                     document.getElementById('status').innerText = "Erro Crítico"; 
                     span.recordException(e);
-                    // Garante que erro de rede também conta como status_code = 2
                     span.setStatus({ code: SpanStatusCode.ERROR });
                     span.end(); 
                 });
@@ -144,9 +150,9 @@ RUM_HTML = """
 <body>
     <div class="card">
         <h1>🛍️ Loja RUM</h1>
-        <p>Dashboards alinhados com SigNoz</p>
-        <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR (Gera 'action': 'compra')</button>
-        <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO (Gera 'action': 'erro')</button>
+        <p>Monitorado por Grafana Cloud</p>
+        <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR (Gera Trace)</button>
+        <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO (Gera Alerta)</button>
         <div id="status">Aguardando ação...</div>
     </div>
 </body>
@@ -161,8 +167,7 @@ def home():
 def checkout():
     tracer = trace.get_tracer(__name__)
     
-    # 3. AJUSTE PARA SEU DASHBOARD DE MÉTODOS (BACKEND):
-    # Forçamos 'http.method' = 'DB_INSERT' para não aparecer vazio no gráfico.
+    # Atributos para enriquecer o trace no Backend
     span_attributes = {
         "http.method": "DB_INSERT", 
         "db.system": "mysql",
@@ -191,10 +196,9 @@ def checkout():
 def simular_erro():
     tracer = trace.get_tracer(__name__)
     
-    # 4. AJUSTE PARA O GRÁFICO:
-    # Forçamos 'http.method' = 'INTERNAL_ERROR' para aparecer bonito no gráfico de linhas.
     span_attributes = {
-        "http.method": "INTERNAL_ERROR"
+        "http.method": "INTERNAL_ERROR",
+        "simulacao": "true"
     }
     
     with tracer.start_as_current_span("simulacao_falha", attributes=span_attributes) as span:

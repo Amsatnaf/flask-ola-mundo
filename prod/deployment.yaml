@@ -7,11 +7,6 @@ metadata:
     app: flask-web
 spec:
   replicas: 1
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
   selector:
     matchLabels:
       app: flask-web
@@ -19,56 +14,38 @@ spec:
     metadata:
       labels:
         app: flask-web
-      annotations: # ---------------------------------------------------------
-        # A MÁGICA ACONTECE AQUI:
-        # Dizemos para injetar o agente Python usando a config do namespace 'signoz'
-        instrumentation.opentelemetry.io/inject-python: "signoz/signoz-instrumentation"
-        # --------------------------------------------------------------------
+      annotations:
+        # --- MUDANÇA 1: Comentamos o SigNoz para evitar conflito ---
+        # instrumentation.opentelemetry.io/inject-python: "signoz/signoz-instrumentation"
     spec:
       containers:
         - name: flask-web
-          image: ghcr.io/amsatnaf/flask-web:b28b02d3a7a05f249a9c6055de3b775a4b669a56
+          # --- MUDANÇA 2: Usamos a imagem nova com o JS do Grafana ---
+          image: ghcr.io/amsatnaf/flask-web:v-grafana-01
           imagePullPolicy: Always
-          resources:
-            requests:
-              memory: "64Mi"
-              cpu: "100m"
-            limits:
-              memory: "256Mi"
-              cpu: "500m"
           ports:
             - containerPort: 8080
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 10
-            periodSeconds: 10
-
-          # --- CORREÇÃO DE INDENTAÇÃO AQUI ---
-          # O 'env' deve estar alinhado com 'livenessProbe', 'image', etc.
           env:
-          # --- Variáveis Fixas ---
+          # --- MUDANÇA 3: Variáveis apontando para o Alloy (Agente Grafana) ---
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: "http://grafana-k8s-monitoring-alloy.monitoring.svc.cluster.local:4317"
+          - name: OTEL_EXPORTER_OTLP_PROTOCOL
+            value: "grpc"
+          - name: OTEL_SERVICE_NAME
+            value: "flask-web-loja"
+            
+          # --- Variáveis do Banco (Mantidas) ---
           - name: DB_HOST
             value: "34.44.72.27"
           - name: DB_NAME
             value: "loja_rum"
-
-          # --- Variáveis Secretas (CORRIGIDO) ---
           - name: DB_USER
             valueFrom:
               secretKeyRef:
                 name: mysql-gcp-creds
-                key: DB_USER   # <--- Mudamos de 'username' para 'DB_USER'
-
+                key: DB_USER
           - name: DB_PASS
             valueFrom:
               secretKeyRef:
                 name: mysql-gcp-creds
-                key: DB_PASS   # <--- Mudamos de 'password' para 'DB_PASS'
+                key: DB_PASS

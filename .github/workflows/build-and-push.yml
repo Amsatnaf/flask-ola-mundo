@@ -2,7 +2,7 @@ name: CI - Build & Push image (GHCR)
 
 on:
   push:
-    branches: [ main, rolling, teste ]
+    branches: [ main, rolling, teste, migracao-grafana ]
     paths:
       - 'app/**'
       - 'Dockerfile'
@@ -45,7 +45,7 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           # CORREÇÃO 1: Adicionado "OR teste" no final. Agora a imagem sobe pro registro!
-          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling' || github.ref == 'refs/heads/teste') }}
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/rolling' || ggithub.ref == 'refs/heads/migracao-grafana' || github.ref == 'refs/heads/teste') }}
           
           tags: |
             ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-web:latest' || '' }}
@@ -53,7 +53,7 @@ jobs:
 
       - name: Update Kubernetes Manifest
         # CORREÇÃO 2: Adicionado "OR teste" aqui também para atualizar o YAML automaticamente
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/teste')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/teste' || github.ref == 'refs/heads/migracao-grafana')
         run: |
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
