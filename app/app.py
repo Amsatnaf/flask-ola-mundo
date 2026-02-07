@@ -42,13 +42,13 @@ with app.app_context():
     except Exception as e:
         logger.error(f"❌ FALHA AO CONECTAR NO BANCO: {e}")
 
-# --- Frontend RUM (AGORA COM GRAFANA FARO) ---
+# --- Frontend RUM (CORRIGIDO: TRACING + CORE) ---
 RUM_HTML = """
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Loja RUM - Grafana Faro</title>
+    <title>Loja RUM - Monitoramento Completo</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; background-color: #f4f4f9; padding: 50px; }
         .card { background: white; max-width: 400px; margin: auto; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -61,34 +61,40 @@ RUM_HTML = """
         #status { margin-top: 20px; font-weight: bold; color: #555; }
     </style>
     
-    <script src="https://unpkg.com/@grafana/faro-web-sdk@^1.0.0/dist/bundle/faro-web-sdk.iife.js"></script>
+    <script src="https://unpkg.com/@grafana/faro-web-sdk@^1.4.0/dist/bundle/faro-web-sdk.iife.js"></script>
+    
+    <script src="https://unpkg.com/@grafana/faro-web-tracing@^1.4.0/dist/bundle/faro-web-tracing.iife.js"></script>
 
     <script>
-      // Inicialização do Faro com a URL que você pegou no painel
+      // Configuração para ligar Frontend ao Backend
       var faro = GrafanaFaroWebSdk.initializeFaro({
         url: 'https://faro-collector-prod-sa-east-1.grafana.net/collect/e1a2f88c30e6e51ce17e7027fda40ae4',
         app: {
           name: 'loja-frontend',
-          version: '1.0.0',
+          version: '2.0.0', // Mudei a versão para você ver a diferença no dashboard
           environment: 'production'
         },
         instrumentations: [
-          // Captura erros de console, cliques, performance e rede automaticamente
           new GrafanaFaroWebSdk.ConsoleInstrumentation(),
           new GrafanaFaroWebSdk.ErrorsInstrumentation(),
-          new GrafanaFaroWebSdk.WebTracingInstrumentation(),
-          new GrafanaFaroWebSdk.SessionInstrumentation()
+          new GrafanaFaroWebSdk.SessionInstrumentation(),
+          
+          // AQUI ESTÁ A CORREÇÃO: Usamos o pacote 'GrafanaFaroWebTracing'
+          new GrafanaFaroWebTracing.TracingInstrumentation({
+            // Isso garante que o trace do front se conecte ao trace do back (Flask)
+            propagationKey: 'traceparent',
+            cors: true 
+          })
         ]
       });
 
-      // Função auxiliar para os botões da página
       window.acao = (tipo) => {
           const endpoint = tipo === 'comprar' ? '/checkout' : '/simular_erro';
           console.info(`🚀 [AÇÃO] Usuário: ${tipo.toUpperCase()}`);
           
           document.getElementById('status').innerText = "Processando...";
 
-          // Envia um evento customizado para o Grafana (User Interaction)
+          // Envia evento de clique para contagem de uso
           faro.api.pushEvent('click_botao', { acao: tipo });
 
           fetch(endpoint, { method: 'POST' })
@@ -100,14 +106,13 @@ RUM_HTML = """
                 } else {
                     document.getElementById('status').innerText = `❌ Erro: ${res.body.msg}`;
                     document.getElementById('status').style.color = "red";
-                    // Envia o erro explicitamente para o Grafana Faro
+                    // Envia erro estruturado para o Grafana (Conta no gráfico de erros)
                     faro.api.pushError(new Error(res.body.msg));
                 }
             })
             .catch(e => { 
                 console.error("🔥 Erro JS:", e);
                 document.getElementById('status').innerText = "Erro Crítico";
-                // Envia exceções de rede/js para o Grafana Faro
                 faro.api.pushError(e);
             });
       };
@@ -116,7 +121,7 @@ RUM_HTML = """
 <body>
     <div class="card">
         <h1>🛍️ Loja RUM</h1>
-        <p>Monitorado por Grafana Faro</p>
+        <p>Versão 2.0 - Full Monitoring</p>
         <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR</button>
         <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO</button>
         <div id="status">Aguardando ação...</div>
@@ -133,7 +138,7 @@ def home():
 def checkout():
     tracer = trace.get_tracer(__name__)
     
-    # Atributos para enriquecer o trace no Backend
+    # Isso vai aparecer no detalhe do Trace
     span_attributes = {
         "http.method": "DB_INSERT", 
         "db.system": "mysql",
