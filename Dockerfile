@@ -27,5 +27,5 @@ EXPOSE 8080
 CMD ["opentelemetry-instrument", \
      "--traces_exporter", "otlp", \
      "--metrics_exporter", "otlp", \
-     "--service_name", "flask-web-loja", \
+     "--service_name", "flask-grafana-loja-loja", \
      "python", "app.py"]

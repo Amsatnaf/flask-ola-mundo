@@ -6,11 +6,11 @@ metadata:
   # para que o Prometheus dele identifique. Geralmente não precisa, mas se não aparecer,
   # é aqui que investigamos.
   labels:
-    app: flask-web
+    app: flask-grafana-loja
 spec:
   selector:
     matchLabels:
-      app: flask-web # <--- Isso TEM que bater com a label do seu Service.yaml
+      app: flask-grafana-loja # <--- Isso TEM que bater com a label do seu Service.yaml
   endpoints:
   - port: web        # <--- Isso TEM que bater com o 'name' da porta no Service.yaml
     path: /metrics   # O caminho padrão que a biblioteca Python cria

@@ -47,8 +47,8 @@ jobs:
           # Pusha a imagem se for um evento de PUSH (não PR)
           push: ${{ github.event_name == 'push' }}
           tags: |
-            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-web:latest' || '' }}
-            ghcr.io/amsatnaf/flask-web:${{ github.sha }}
+            ${{ github.ref == 'refs/heads/main' && 'ghcr.io/amsatnaf/flask-grafana-loja:latest' || '' }}
+            ghcr.io/amsatnaf/flask-grafana-loja:${{ github.sha }}
 
       - name: Update Kubernetes Manifest
         # Executa apenas se for push nas branches permitidas
@@ -65,7 +65,7 @@ jobs:
 
           if [ -f "$FILE_PATH" ]; then
             # Atualiza a imagem com a tag do commit atual (SHA)
-            sed -i "s|image: ghcr.io/amsatnaf/flask-web:.*|image: ghcr.io/amsatnaf/flask-web:${{ github.sha }}|g" $FILE_PATH
+            sed -i "s|image: ghcr.io/amsatnaf/flask-grafana-loja:.*|image: ghcr.io/amsatnaf/flask-grafana-loja:${{ github.sha }}|g" $FILE_PATH
             
             # Adiciona e comita a mudança
             git add $FILE_PATH

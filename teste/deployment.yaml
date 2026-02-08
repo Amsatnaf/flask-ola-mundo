@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-web
-  namespace: flask-prod
+  name: flask-grafana-loja
+  namespace: flask-grafana
   labels:
-    app: flask-web
+    app: flask-grafana-loja
 spec:
   replicas: 1
   strategy:            # ← strategy vai AQUI, dentro de deployment.spec
@@ -14,15 +14,15 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: flask-web
+      app: flask-grafana-loja
   template:
     metadata:
       labels:
-        app: flask-web
+        app: flask-grafana-loja
     spec:
       containers:
-        - name: flask-web
-          image: ghcr.io/amsatnaf/flask-web:866ba3aa9a12fe70681697a67632453008f2216a
+        - name: flask-grafana-loja
+          image: ghcr.io/amsatnaf/flask-grafana-loja:866ba3aa9a12fe70681697a67632453008f2216a
           imagePullPolicy: Always
           resources:
             requests:

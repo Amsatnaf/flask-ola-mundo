@@ -10,23 +10,23 @@ Projeto **mínimo** para estudo:
 - `Dockerfile` instala `flask` e executa o app
 
 ## 🏷️ Imagem
-Publicada como: `ghcr.io/Amsatnaf/flask-web:latest`
+Publicada como: `ghcr.io/Amsatnaf/flask-grafana-loja:latest`
 > O workflow usa `GITHUB_TOKEN` com permissão `packages: write`, então **não precisa** criar PAT.
 
 ## 🤖 CI (build-and-push)
 - Arquivo: `.github/workflows/build-and-push.yml`
 - Dispara em **push/PR** que toquem `app/**` ou `Dockerfile`
 - Em **PR**: apenas **builda** (sem `push`)
-- Em **push na main**: **builda e publica** em `ghcr.io/Amsatnaf/flask-web:latest`
+- Em **push na main**: **builda e publica** em `ghcr.io/Amsatnaf/flask-grafana-loja:latest`
 
 ## 🚀 CD (Fleet)
 Crie **um GitRepo** no Rancher Fleet apontando para `prod/`:
-- `repo`: `https://github.com/Amsatnaf/flask-web-prod-only.git`
+- `repo`: `https://github.com/Amsatnaf/flask-grafana-loja-prod-only.git`
 - `branch`: `main`
 - `paths`: `["prod"]`
 - (não use `prune: true`)
 
-O `prod/kustomization.yaml` define `namespace: flask-prod` e aplica **Deployment + Service + Ingress**.
+O `prod/kustomization.yaml` define `namespace: flask-grafana` e aplica **Deployment + Service + Ingress**.
 
 ### URL de exemplo
 - `http://flask.prod.129.213.28.76.sslip.io/`
@@ -39,7 +39,7 @@ git init
 git add .
 git commit -m "init minimal flask"
 git branch -M main
-git remote add origin https://github.com/Amsatnaf/flask-web-prod-only.git
+git remote add origin https://github.com/Amsatnaf/flask-grafana-loja-prod-only.git
 git push -u origin main
 
 # 2) (opcional) branch + PR

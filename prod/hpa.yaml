@@ -6,7 +6,7 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: flask-web # Tem que bater com o nome do seu Deployment
+    name: flask-grafana-loja # Tem que bater com o nome do seu Deployment
   minReplicas: 1
   maxReplicas: 5
   metrics:

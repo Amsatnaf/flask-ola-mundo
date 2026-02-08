@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-web
-  namespace: flask-prod
+  name: flask-grafana-loja
+  namespace: flask-grafana
   labels:
-    app: flask-web
+    app: flask-grafana-loja
 spec:
   replicas: 1
   strategy:
@@ -14,11 +14,11 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: flask-web
+      app: flask-grafana-loja
   template:
     metadata:
       labels:
-        app: flask-web
+        app: flask-grafana-loja
       annotations:
         # ---------------------------------------------------------
         # MUDANÇA 1: Comentamos o SigNoz (O "Pause" na injeção antiga)
@@ -26,12 +26,12 @@ spec:
         # ---------------------------------------------------------
     spec:
       containers:
-        - name: flask-web
+        - name: flask-grafana-loja
           # ---------------------------------------------------------
           # MUDANÇA 2: Mantenha a imagem que o seu GitHub Actions vai substituir!
-          # O script 'sed' vai procurar por "ghcr.io/amsatnaf/flask-web:..." e trocar pelo SHA.
+          # O script 'sed' vai procurar por "ghcr.io/amsatnaf/flask-grafana-loja:..." e trocar pelo SHA.
           # Pode deixar a última tag que estava lá, o robô vai atualizar sozinho.
-          image: ghcr.io/amsatnaf/flask-web:latest 
+          image: ghcr.io/amsatnaf/flask-grafana-loja:latest 
           # ---------------------------------------------------------
           imagePullPolicy: Always
           resources:
@@ -70,7 +70,7 @@ spec:
 
           # Nome do Serviço no Grafana Cloud
           - name: OTEL_SERVICE_NAME
-            value: "flask-web-loja"
+            value: "flask-grafana-loja-loja"
 
           # --- Variáveis do Banco (Mantidas Iguais) ---
           - name: DB_HOST

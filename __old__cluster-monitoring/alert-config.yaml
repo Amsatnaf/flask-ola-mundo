@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1alpha1
 kind: AlertmanagerConfig
 metadata:
   name: flask-email-config
-  namespace: flask-prod  # Correto: Onde o alerta nasce
+  namespace: flask-grafana  # Correto: Onde o alerta nasce
   labels:
     release: rancher-monitoring
 spec:

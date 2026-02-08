@@ -2,9 +2,9 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   name: flask-rules
-  namespace: flask-prod
+  namespace: flask-grafana
   labels:
-    app: flask-web
+    app: flask-grafana-loja
     release: rancher-monitoring
     app.kubernetes.io/part-of: rancher-monitoring
 spec:
@@ -13,7 +13,7 @@ spec:
     rules:
     - alert: FlaskHighCpu
       # Query corrigida (container!="") e threshold ajustado
-      expr: sum(rate(container_cpu_usage_seconds_total{namespace="flask-prod", container!=""}[1m])) by (pod, namespace) > 0.05
+      expr: sum(rate(container_cpu_usage_seconds_total{namespace="flask-grafana", container!=""}[1m])) by (pod, namespace) > 0.05
       for: 1m
       labels:
         severity: critical
