@@ -1,5 +1,4 @@
 flask
-prometheus-flask-exporter
 flake8
 pytest
 flask-sqlalchemy
