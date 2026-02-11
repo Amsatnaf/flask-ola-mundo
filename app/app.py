@@ -133,7 +133,7 @@ RUM_HTML = """
 </head>
 <body>
     <div class="card">
-        <h1>🛍️ Loja RUM v3.0</h1>
+        <h1>🛍️ Loja RUM v3.1</h1>
         <p>Monitoramento Avançado</p>
         
         <button class="btn-buy" 
