@@ -19,11 +19,12 @@ spec:
     metadata:
       labels:
         app: flask-web
-      annotations: # ---------------------------------------------------------
+      annotations:
+        # ---------------------------------------------------------
         # A MÁGICA ACONTECE AQUI:
         # Dizemos para injetar o agente Python usando a config do namespace 'signoz'
         instrumentation.opentelemetry.io/inject-python: "signoz/signoz-instrumentation"
-        # --------------------------------------------------------------------
+        # ---------------------------------------------------------
     spec:
       containers:
         - name: flask-web
@@ -50,25 +51,18 @@ spec:
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 10
-
-          # --- CORREÇÃO DE INDENTAÇÃO AQUI ---
-          # O 'env' deve estar alinhado com 'livenessProbe', 'image', etc.
           env:
-          # --- Variáveis Fixas ---
-          - name: DB_HOST
-            value: "34.44.72.27"
-          - name: DB_NAME
-            value: "loja_rum"
-
-          # --- Variáveis Secretas (CORRIGIDO) ---
-          - name: DB_USER
-            valueFrom:
-              secretKeyRef:
-                name: mysql-gcp-creds
-                key: DB_USER   # <--- Mudamos de 'username' para 'DB_USER'
-
-          - name: DB_PASS
-            valueFrom:
-              secretKeyRef:
-                name: mysql-gcp-creds
-                key: DB_PASS   # <--- Mudamos de 'password' para 'DB_PASS'
+            - name: DB_HOST
+              value: "mysql-test.flask-prod.svc.cluster.local"
+            - name: DB_NAME
+              value: "loja_rum"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-local-creds
+                  key: DB_USER
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-local-creds
+                  key: DB_PASS
