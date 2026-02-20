@@ -13,11 +13,11 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Configuração do Banco de Dados ---
-db_user = os.getenv("DB_USER", "root")
-db_pass = os.getenv("DB_PASS", "senha")
-db_host = os.getenv("DB_HOST", "127.0.0.1")
-db_name = os.getenv("DB_NAME", "loja_rum")
+# --- Configuração do Banco de Dados --- FAKE
+db_user = os.environ["DB_USER"]
+db_pass = os.environ["DB_PASS"]
+db_host = os.environ["DB_HOST"]
+db_name = os.environ["DB_NAME"]
 
 encoded_pass = quote_plus(db_pass)
 app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{encoded_pass}@{db_host}/{db_name}'
