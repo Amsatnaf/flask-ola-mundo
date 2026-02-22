@@ -31,7 +31,7 @@ spec:
           # MUDANÇA 2: Mantenha a imagem que o seu GitHub Actions vai substituir!
           # O script 'sed' vai procurar por "ghcr.io/amsatnaf/flask-grafana-loja:..." e trocar pelo SHA.
           # Pode deixar a última tag que estava lá, o robô vai atualizar sozinho.
-          image: ghcr.io/amsatnaf/flask-grafana-loja:1706b7d50e238d531dd3ac0d4599337beb37b19f1
+          image: ghcr.io/amsatnaf/flask-grafana-loja:4cfebc5f72e4753b99302d8c009655a6cba4704d
           # ---------------------------------------------------------
           imagePullPolicy: Always
           resources:
