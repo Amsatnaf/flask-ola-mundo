@@ -5,8 +5,7 @@ metadata:
   namespace: flask-grafana
   labels:
     app: flask-grafana-loja
-spec:
-  progressDeadlineSeconds: 120
+spec:  
   replicas: 1
   strategy:
     type: RollingUpdate
