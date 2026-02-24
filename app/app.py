@@ -6,12 +6,15 @@ from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from opentelemetry import trace
 from opentelemetry.trace import Status, StatusCode
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 
 app = Flask(__name__)
 
 # --- Configuração de Logs ---
+LoggingInstrumentor().instrument(set_logging_format=True)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 # --- Configuração do Banco de Dados --- FAKE
 db_user = os.environ["DB_USER"]
