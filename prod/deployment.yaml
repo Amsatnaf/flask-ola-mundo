@@ -52,6 +52,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           env:
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
             - name: DB_HOST
               value: "mysql-test.flask-prod.svc.cluster.local"
             - name: DB_NAME
