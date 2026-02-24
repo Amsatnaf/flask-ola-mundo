@@ -146,7 +146,7 @@ RUM_HTML = """
 </head>
 <body>
     <div class="card">
-        <h1>🛍️ Loja RUM</h1>
+        <h1>🛍️ Loja RUM.</h1>
         <p>Dashboards alinhados com SigNoz</p>
         <button class="btn-buy" onclick="window.acao('comprar')">COMPRAR (Gera 'action': 'compra')</button>
         <button class="btn-error" onclick="window.acao('erro')">GERAR ERRO (Gera 'action': 'erro')</button>
